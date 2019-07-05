@@ -1,0 +1,70 @@
+import torch
+import torch.nn as nn
+#from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
+from torch.distributions.normal import Normal
+
+from models.Encoder import Encoder
+from models.Decoder import Decoder
+
+class ParaphraseModel(nn.Module):
+    
+    ''' 
+        dicstionary_size = the size of the dictionary in the dataset
+        embedding_dim = each word in the dictionary is embedded in a vector space with that dimension
+        rnn_hidden_size = 
+        rnn_num_layers = the numbers of the layers in the each LSTM in the model
+        z_dim = the encoder encodes the sentence to a z-vector space with that dimension
+    ''' 
+    def __init__(self, dictionary_size=100, embedding_dim=128, rnn_hidden_size=32, rnn_num_layers=2, z_dim=128): #Does embedding_dim should be the same as z_dim?
+        super(ParaphraseModel, self).__init__()
+        self.embedding = nn.Embedding(dictionary_size, embedding_dim) #should be replaced in word embedding like word2vec
+        self.encoder = Encoder(embedding_dim, rnn_hidden_size, rnn_num_layers, z_dim)
+        self.decoder = Decoder(embedding_dim, rnn_hidden_size, rnn_num_layers, dictionary_size)
+        self.cel = nn.CrossEntropyLoss(ignore_index=-1)  #cross entrpoy
+        self.dictionary_size = dictionary_size
+        self.embedding_dim = embedding_dim
+
+    def train_model(self, xo, xp, xo_len, xp_len, kld_coef=1):
+        logits, z, mu, logvar = self.AE_forward(xo, xp, xo_len, xp_len)
+        
+        xp_mask = torch.zeros_like(xp)  
+        for batch_idx in range(len(xp)):
+            xp_mask[batch_idx, xp_len[batch_idx]:] = -1
+
+        mask = torch.ones_like(xp).float().unsqueeze(-1)
+        for batch_idx in range(len(xp)):
+            mask[xp_len[batch_idx]:] = 0.0
+
+        cel_loss = self.cel(logits.view(-1, self.dictionary_size).contiguous(), xp_mask.view(-1))
+        kl_loss = -0.5 * (1 + logvar - mu.pow(2) - logvar.exp()).sum(1).mean()
+        total_loss = cel_loss + kld_coef * kl_loss  
+        print(cel_loss, kl_loss)
+        return total_loss
+
+    def AE_forward(self, xo, xp, xo_len, xp_len):
+        xo_embed = self.embedding(xo)
+        xp_embed = self.embedding(xp)
+
+        mu, sigma = self.encoder(xo_embed, xp_embed, xo_len, xp_len)
+        std = torch.exp(0.5*sigma)
+        nd = Normal(torch.ones_like(mu), torch.zeros_like(std))
+        z = nd.sample() * std + mu
+        logits = self.decoder(xo_embed, z, xo_len, xp_len)
+        return logits, z, mu, sigma
+
+    def infer(self, xo, xo_len, z):
+        xo_embed = self.embedding(xo)
+
+    def decode(self, xo, xo_len):
+        xo_embed = self.embedding(xo)
+        _, (hT, cT) = self.decoder.ose(xo_embed, xo_len)
+        # SOS_Symbol * xo.size(0)
+        # for i in range(MAX_LENGTH):
+        #     current_state
+
+   
+if __name__ == '__main__':
+    a = ParaphraseModel()
+    b = torch.LongTensor([[1, 2, 3], [4, 5, 2], [1, 1, 1], [1, 2, 1]])
+    c = torch.LongTensor([3, 2, 1, 2])
+    print(a.train_model(b, b, c, c))
