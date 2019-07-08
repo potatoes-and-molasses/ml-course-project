@@ -5,7 +5,7 @@ from models.ParaphraseModel import ParaphraseModel
 from loader import ParaLoader, pad_collate
 from torch.utils.data import DataLoader
 import numpy as np
-from utils.misc import kld_coef
+from utils.misc import kld_coef, sentencify
 
 
 
@@ -18,7 +18,7 @@ def cfg():
     """
     General Hyperparameters
     """
-    epochs = 2  # Number of epochs to run
+    epochs = 1  # Number of epochs to run
     lr = 3e-4  # Learning Rate
     batch_size = 1  # Batch size
     words_dict = 'words_dict.npy'
@@ -62,7 +62,10 @@ def main(_run):
     
 
     #torch.autograd.set_detect_anomaly(True)
-    dictionary_size = len(np.load(args.words_dict).item())
+    
+    dct = np.load(args.words_dict).item()
+    dictionary_size = len(dct)
+    
     train_dataset = DataLoader(ParaLoader(args.train_dataset, args.words_dict), batch_size=args.batch_size, collate_fn=pad_collate)
     validation_dataset = DataLoader(ParaLoader(args.validation_dataset, args.words_dict), batch_size=1,
                                     collate_fn=pad_collate)
@@ -72,4 +75,9 @@ def main(_run):
         train_res = train(epoch, m, train_dataset, optimizer)
         val_res = validate(epoch, m, validation_dataset)
         print('train loss: %s\nvalidation loss: %s' % (train_res, val_res))
+    
+        for (inp, output, input_len, output_len, paths) in train_dataset:
+            infres = m.infer(inp, input_len)
+            for i in sentencify(infres, dct):
+                print('%s\n'%paths,i)
 

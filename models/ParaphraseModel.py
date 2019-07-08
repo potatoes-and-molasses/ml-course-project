@@ -6,6 +6,12 @@ from torch.distributions.normal import Normal
 from models.Encoder import Encoder
 from models.Decoder import Decoder
 
+SOS_TOKEN = 0
+EOS_TOKEN = 1
+UNK_TOKEN = 2
+MAX_PARA_LENGTH = 15
+
+
 class ParaphraseModel(nn.Module):
     
     ''' 
@@ -45,26 +51,51 @@ class ParaphraseModel(nn.Module):
         xo_embed = self.embedding(xo)
         xp_embed = self.embedding(xp)
 
-        mu, sigma = self.encoder(xo_embed, xp_embed, xo_len, xp_len)
-        std = torch.exp(0.5*sigma)
+        mu, logvar = self.encoder(xo_embed, xp_embed, xo_len, xp_len)
+        std = torch.exp(0.5*logvar)
         nd = Normal(torch.ones_like(mu), torch.zeros_like(std))
         z = nd.sample() * std + mu
         logits = self.decoder(xo_embed, z, xo_len, xp_len)
-        return logits, z, mu, sigma
+        return logits, z, mu, logvar
 
-    def infer(self, xo, xo_len, z):
-        xo_embed = self.embedding(xo)
-
-    def decode(self, xo, xo_len):
+    def infer(self, xo, xo_len):
         xo_embed = self.embedding(xo)
         _, (hT, cT) = self.decoder.ose(xo_embed, xo_len)
-        # SOS_Symbol * xo.size(0)
-        # for i in range(MAX_LENGTH):
-        #     current_state
+        completed_sentences = torch.zeros(len(xo_embed))
+        sentences = []
+        mu, sigma = torch.zeros(len(xo), self.embedding_dim), torch.ones(len(xo), self.embedding_dim)
+        nd = Normal(mu, sigma)
+        z = nd.sample()
+        out = hT[-1]
+        steps = 0
+        while not all(completed_sentences):
+            real_inp = torch.cat((z, out), 1).unsqueeze(1)
+            output, (hT, cT) = self.decoder.pse(real_inp, torch.tensor([1] * len(z)), h0=hT, c0=cT)
+            out = hT[-1]
+            probs = self.decoder.linear(out)
+            
+            topwords = [word_probs.topk(1)[1] for word_probs in probs]
+            for j, result in enumerate(topwords):
+                if int(result)==EOS_TOKEN:
+                    completed_sentences[j] = 1
+            
+            sentences.append(topwords)
+            steps+=1
+            if steps == MAX_PARA_LENGTH:
+                break
+        
+        return sentences
 
-   
+
+       
 if __name__ == '__main__':
     a = ParaphraseModel()
     b = torch.LongTensor([[1, 2, 3], [4, 5, 2], [1, 1, 1], [1, 2, 1]])
     c = torch.LongTensor([3, 2, 1, 2])
     print(a.train_model(b, b, c, c))
+    res = (a.infer(b,c))
+
+        
+
+            
+    

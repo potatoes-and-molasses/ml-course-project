@@ -2,10 +2,6 @@ import torch
 import torch.nn as nn
 from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
 
-SOS_TOKEN = 0
-EOS_TOKEN = 1
-UNK_TOKEN = 2
-MAX_LENGTH = 10
 
 class LSTM_VAE(nn.Module):
     def __init__(self, embedding_dim, rnn_hidden_size, rnn_num_layers):
