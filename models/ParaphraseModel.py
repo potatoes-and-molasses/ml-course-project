@@ -32,19 +32,11 @@ class ParaphraseModel(nn.Module):
 
     def train_model(self, xo, xp, xo_len, xp_len, kld_coef=1):
         logits, z, mu, logvar = self.AE_forward(xo, xp, xo_len, xp_len)
-        
-        xp_mask = torch.zeros_like(xp)  
-        for batch_idx in range(len(xp)):
-            xp_mask[batch_idx, xp_len[batch_idx]:] = -1
 
-        mask = torch.ones_like(xp).float().unsqueeze(-1)
-        for batch_idx in range(len(xp)):
-            mask[xp_len[batch_idx]:] = 0.0
-
-        cel_loss = self.cel(logits.view(-1, self.dictionary_size).contiguous(), xp_mask.view(-1))
+        cel_loss = self.cel(logits.view(-1, self.dictionary_size).contiguous(), xp.view(-1))
         kl_loss = -0.5 * (1 + logvar - mu.pow(2) - logvar.exp()).sum(1).mean()
         total_loss = cel_loss + kld_coef * kl_loss  
-        print(cel_loss, kl_loss)
+        #print(cel_loss, kl_loss)
         return total_loss
 
     def AE_forward(self, xo, xp, xo_len, xp_len):

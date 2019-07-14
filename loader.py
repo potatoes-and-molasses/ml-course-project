@@ -13,7 +13,7 @@ def pad_collate(batch):
     max_output_length = max([len(x[1]) for x in batch])
 
     batch = [(x[0] + (max_input_length - len(x[0])) * [0],  # input
-              x[1] + (max_output_length - len(x[1])) * [0],  # output
+              x[1] + (max_output_length - len(x[1])) * [-1],  # output
               len(x[0]),  # input length
               len(x[1]),  # output length
               x[2]  # path

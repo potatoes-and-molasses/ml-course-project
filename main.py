@@ -18,7 +18,7 @@ def cfg():
     """
     General Hyperparameters
     """
-    epochs = 1  # Number of epochs to run
+    epochs = 1000  # Number of epochs to run
     lr = 3e-4  # Learning Rate
     batch_size = 1  # Batch size
     words_dict = 'words_dict.npy'
