@@ -73,11 +73,11 @@ def main(_run):
     optimizer = torch.optim.Adam(m.parameters(), lr=args.lr)
     for epoch in range(1, args.epochs + 1):
         train_res = train(epoch, m, train_dataset, optimizer)
-        val_res = validate(epoch, m, validation_dataset)
+        val_res = 'nope'#validate(epoch, m, validation_dataset)
         print('train loss: %s\nvalidation loss: %s' % (train_res, val_res))
     
         for (inp, output, input_len, output_len, paths) in train_dataset:
             infres = m.infer(inp, input_len)
             for i in sentencify(infres, dct):
-                print('%s\n'%paths,i)
+                print('%s\n'%open(paths[0],'r').read(),i)
 
