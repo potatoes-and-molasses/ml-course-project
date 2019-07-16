@@ -14,6 +14,7 @@ parser.add_argument('-c', '--clear', action='store_true', help='remove existing 
 parser.add_argument('-tr', '--train', help='train sample size')
 parser.add_argument('-v', '--validation', help='validation sample size')
 parser.add_argument('-te', '--test', help='test sample size')
+parser.add_argument('-a', '--all', action='store_true', help='parse all data - 70,20,10.')
 
 args =  parser.parse_args()
 
@@ -25,18 +26,24 @@ if args.root:
         if not os.path.isdir(i):
             os.mkdir(i)
 
-train_size = int(args.train)
-validation_size = int(args.validation)
-test_size = int(args.test)
+
 dataset_path = args.data
 
 dataset = pd.read_csv(dataset_path)
-
-
 positive = dataset[dataset.is_duplicate==1]
+if args.all:
+    train_size = int(len(positive)*0.7)-1
+    validation_size = int(len(positive)*0.2)-1
+    test_size = int(len(positive)*0.1)-1
+
+else:
+    train_size = int(args.train)
+    validation_size = int(args.validation)
+    test_size = int(args.test)
 
 
-stuff = positive.sample(train_size+validation_size+test_size)
+
+stuff = positive#.sample(train_size+validation_size+test_size)
 
 train, validation, test = stuff[:train_size], stuff[train_size:train_size+validation_size], stuff[-test_size:]
 
@@ -59,7 +66,7 @@ def pd_to_samples_dir(data, path):
     for row in data.iterrows():
         idx, question, rephrase = row[1].id, row[1].question1, row[1].question2
         question, rephrase = prep_sentence(question), prep_sentence(rephrase)
-        with open(path+'/%s'%idx,'w') as f:
+        with open(path+'/%s'%idx,'w', encoding='utf-8') as f:
             f.write(question+'|||'+rephrase)
             
 pd_to_samples_dir(train, '%s/%s'%(args.root, 'train'))

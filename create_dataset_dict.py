@@ -28,7 +28,9 @@ for f_name in Path('data').glob('**/*'):
                     counter += 1
 
         except:
+            f.close()
             print(f_name)
+            os.rename(f_name, 'badencoding_data/'+f_name.name)
 
 #words['<SOS>'] = counter
 #words['<EOS>'] = counter + 1
