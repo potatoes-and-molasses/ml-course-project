@@ -56,7 +56,8 @@ def validate(epoch, model, dataset):
     for i, (inp, output, input_len, output_len, paths) in enumerate(dataset):
         loss = model.train_model(inp, output, input_len, output_len)
         total_loss += loss.item()
-
+        if not i%1000:
+            print('processed %s samples\ncurrent loss: %s' % (i, total_loss/(dataset.batch_size*i+1)))
     return total_loss / len(dataset)
 
 
